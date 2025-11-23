@@ -122,13 +122,12 @@ async function registerCommands(token, clientId) {
 async function main() {
   console.log('🚀 Iniciando bot Veil...');
   
-  let token;
-  try {
-    token = await getAccessToken();
-    console.log('✅ Token de acesso obtido com sucesso!');
-  } catch (error) {
-    console.error('❌ Erro ao obter token do Discord:', error.message);
-    console.error('Certifique-se de que a integração Discord está configurada corretamente.');
+  const token = process.env.DISCORD_BOT_TOKEN;
+  
+  if (!token) {
+    console.error('❌ Token do bot não encontrado!');
+    console.error('Por favor, configure a variável de ambiente DISCORD_BOT_TOKEN com o token do seu bot.');
+    console.error('Você pode obter o token em: https://discord.com/developers/applications');
     process.exit(1);
   }
   
@@ -139,7 +138,13 @@ async function main() {
     await registerCommands(token, client.user.id);
   });
   
-  await client.login(token);
+  try {
+    await client.login(token);
+  } catch (error) {
+    console.error('❌ Erro ao fazer login no Discord:', error.message);
+    console.error('Verifique se o token está correto e se o bot tem as permissões necessárias.');
+    process.exit(1);
+  }
 }
 
 main().catch(console.error);
