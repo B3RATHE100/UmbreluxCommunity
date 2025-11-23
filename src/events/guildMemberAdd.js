@@ -25,26 +25,41 @@ export default {
       return;
     }
 
-    const embed = new EmbedBuilder()
-      .setColor(config.colors.veil)
-      .setTitle(`${config.emojis.star} Bem-vindo ao Mundo de Veil!`)
+    // Primeira imagem - banner de boas-vindas
+    const welcomeBannerEmbed = new EmbedBuilder()
+      .setColor(0x8BB9FE)
+      .setImage('https://cdn.discordapp.com/attachments/1426648046074335295/1441821961474019388/1763788081783.jpg');
+
+    // Texto principal estilizado
+    const mainTextEmbed = new EmbedBuilder()
+      .setColor(0x8BB9FE)
       .setDescription(
-        `**${member.toString()}** acabou de entrar no **${member.guild.name}**!\n\n` +
-        `${config.emojis.shield} É maravilhoso ver você aqui! Este é um espaço para fazer amizades, ` +
-        `se divertir e mergulhar na energia do nosso mundo inspirado em Veil.\n\n` +
-        `**Primeiros Passos:**\n` +
-        `${config.emojis.fire} Registre-se no canal de registro\n` +
-        `${config.emojis.star} Escolha sua cor favorita\n` +
-        `${config.emojis.trophy} Apresente-se para a comunidade\n` +
-        `${config.emojis.crown} Configure suas notificações\n\n` +
-        `**Sistema de Níveis:**\n` +
-        `Ganhe XP conversando e participando em calls de voz! ` +
-        `Use \`/perfil\` para ver seu progresso e cargos disponíveis.`
-      )
-      .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
-      .setImage('https://www.imagensanimadas.com/data/media/1081/linha-de-natal-imagem-animada-0045.gif')
+        `（ᴖ͈𐎟ᴖ͈）𝅙﹒<a:emoji_58:1441724281200578681>𝅙✣𝅙﹒É maravilhoso ver você aqui! Este é um espaço para fazer amizades, se divertir e mergulhar na energia do nosso mundo.﹒𝅙𖹭𝅙𝅙┈𝅙𝅙﹒୨`
+      );
+
+    // Imagem do separador
+    const separatorEmbed = new EmbedBuilder()
+      .setColor(0x8BB9FE)
+      .setImage('https://www.imagensanimadas.com/data/media/1081/linha-de-natal-imagem-animada-0045.gif');
+
+    // Instruções detalhadas
+    const instructionsEmbed = new EmbedBuilder()
+      .setColor(0x8BB9FE)
+      .setDescription(
+        `バ𝅙﹒𝅙๑<a:emoji_59:1441724362729328691>﹒𝅙**[Registre-se](https://discord.com/channels/1321841848670490674/1438400416781041778)** no canal de registro para que possamos te conhecer melhor. ﹒𝅙海𝅙◞𝅙𝅙空 \n` +
+        `バ𝅙﹒𝅙๑<a:emoji_60:1441724423005798430>﹒𝅙**[Escolha sua cor](https://discord.com/channels/1321841848670490674/1438400543398821938)** visitando o canal de cores.﹒𝅙海𝅙◞𝅙𝅙空  \n` +
+        `バ𝅙﹒𝅙๑<a:emoji_61:1441725286851940462>﹒𝅙**Apresente-se** no canal de se apresentar e conte um pouco sobre você.﹒𝅙海𝅙◞𝅙𝅙空 \n` +
+        `バ𝅙﹒𝅙๑<a:emoji_62:1441725351855128678>﹒𝅙**[Configure suas notificações](https://discord.com/channels/1321841848670490674/1438401064817918104)** no canal Pings para não perder nada.﹒𝅙海𝅙◞𝅙𝅙空 \n` +
+        `バ𝅙﹒𝅙๑<a:emoji_63:1441725414400856098>﹒𝅙Depois disso, **explore os demais canais** e mergulhe na energia do Umbrelux.﹒𝅙海𝅙◞𝅙𝅙空   \n\n` +
+        `-# ➻﹒𝅙១<a:emoji_64:1441726976674103407>﹒合𝅙𝅙𝅙⸻  **Participe, divirta-se e faça sua presença brilhar.**﹒バ﹒✦`
+      );
+
+    // Imagem final (será substituída por uma imagem do servidor se disponível)
+    const finalImageEmbed = new EmbedBuilder()
+      .setColor(0x8BB9FE)
+      .setImage(member.guild.iconURL({ size: 512 }) || 'https://via.placeholder.com/512x256/8BB9FE/FFFFFF?text=Bem-vindo!')
       .setFooter({ 
-        text: `Membro #${member.guild.memberCount} • Participe, divirta-se e faça sua presença brilhar!`,
+        text: `Membro #${member.guild.memberCount}`,
         iconURL: member.guild.iconURL() 
       })
       .setTimestamp();
@@ -68,7 +83,7 @@ export default {
     try {
       await welcomeChannel.send({ 
         content: `${member.toString()} 🎉`,
-        embeds: [embed],
+        embeds: [welcomeBannerEmbed, mainTextEmbed, separatorEmbed, instructionsEmbed, finalImageEmbed],
         components: [row]
       });
     } catch (error) {
