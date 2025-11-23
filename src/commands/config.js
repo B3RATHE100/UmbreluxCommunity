@@ -49,8 +49,18 @@ export default {
           inline: true
         },
         {
-          name: `${config.emojis.crown} Recompensas de Cargo`,
-          value: formatRoleRewardsList(interaction.guild, guildConfig.roleRewards)
+          name: `${config.emojis.fire} Recompensas de Chat`,
+          value: guildConfig.chatRoleRewards.length > 0 
+            ? formatRoleRewardsList(interaction.guild, guildConfig.chatRoleRewards, 'chat')
+            : 'Nenhuma recompensa de chat configurada',
+          inline: false
+        },
+        {
+          name: '🎙️ Recompensas de Voice',
+          value: guildConfig.voiceRoleRewards.length > 0
+            ? formatRoleRewardsList(interaction.guild, guildConfig.voiceRoleRewards, 'voice')
+            : 'Nenhuma recompensa de voice configurada',
+          inline: false
         },
         {
           name: '📊 Sistema de XP',
@@ -82,16 +92,28 @@ export default {
           emoji: '🎉'
         },
         {
-          label: 'Adicionar Recompensa de Cargo',
-          description: 'Adicione um cargo como recompensa para um nível',
-          value: 'add_role_reward',
-          emoji: '➕'
+          label: 'Adicionar Recompensa de Chat',
+          description: 'Adicione um cargo para nível de chat',
+          value: 'add_chat_reward',
+          emoji: '💬'
         },
         {
-          label: 'Remover Recompensa de Cargo',
-          description: 'Remova uma recompensa de cargo existente',
-          value: 'remove_role_reward',
-          emoji: '➖'
+          label: 'Adicionar Recompensa de Voice',
+          description: 'Adicione um cargo para nível de voice',
+          value: 'add_voice_reward',
+          emoji: '🎙️'
+        },
+        {
+          label: 'Remover Recompensa de Chat',
+          description: 'Remova uma recompensa de chat',
+          value: 'remove_chat_reward',
+          emoji: '❌'
+        },
+        {
+          label: 'Remover Recompensa de Voice',
+          description: 'Remova uma recompensa de voice',
+          value: 'remove_voice_reward',
+          emoji: '🚫'
         },
         {
           label: 'Ver Todas as Recompensas',

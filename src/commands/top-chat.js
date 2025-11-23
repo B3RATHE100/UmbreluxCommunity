@@ -5,8 +5,8 @@ import { getLevelFromXP } from '../config.js';
 
 export default {
   data: new SlashCommandBuilder()
-    .setName('rank')
-    .setDescription('Veja o ranking de níveis do servidor')
+    .setName('top-chat')
+    .setDescription('Veja o ranking de chat do servidor')
     .addIntegerOption(option =>
       option
         .setName('página')
@@ -20,7 +20,7 @@ export default {
     const pageSize = 10;
     const startIndex = (page - 1) * pageSize;
     
-    const leaderboard = db.getLeaderboard(interaction.guild.id, 100);
+    const leaderboard = db.getChatLeaderboard(interaction.guild.id, 100);
     const totalPages = Math.ceil(leaderboard.length / pageSize);
     
     if (page > totalPages && totalPages > 0) {
@@ -34,15 +34,15 @@ export default {
     
     if (pageData.length === 0) {
       return interaction.reply({
-        content: '❌ Nenhum dado de ranking disponível ainda!',
+        content: '❌ Nenhum dado de ranking de chat disponível ainda!',
         ephemeral: true
       });
     }
     
     const embed = new EmbedBuilder()
-      .setColor(config.colors.veil)
-      .setTitle(`${config.emojis.trophy} Ranking do Servidor - Veil`)
-      .setDescription(`Top membros mais ativos do **${interaction.guild.name}**\n\u200b`)
+      .setColor(config.colors.fire)
+      .setTitle(`${config.emojis.fire} Top Chat - ${interaction.guild.name}`)
+      .setDescription(`Membros mais ativos em conversas\n\u200b`)
       .setThumbnail(interaction.guild.iconURL({ dynamic: true, size: 256 }))
       .setFooter({ 
         text: `Página ${page}/${totalPages} • Total de ${leaderboard.length} membros`,
@@ -55,9 +55,7 @@ export default {
     for (let i = 0; i < pageData.length; i++) {
       const userData = pageData[i];
       const position = startIndex + i + 1;
-      const totalXP = userData.chatXP + userData.voiceXP;
-      const chatLevel = getLevelFromXP(userData.chatXP);
-      const voiceLevel = getLevelFromXP(userData.voiceXP);
+      const level = getLevelFromXP(userData.chatXP);
       
       let user;
       try {
@@ -70,7 +68,7 @@ export default {
       
       embed.addFields({
         name: `${medal} ${user.tag}`,
-        value: `${config.emojis.star} **${totalXP}** XP Total • ${config.emojis.fire} Chat Nv${chatLevel} • 🎙️ Voice Nv${voiceLevel}`,
+        value: `${config.emojis.trophy} Nível **${level}** • ${config.emojis.star} **${userData.chatXP}** XP • ${config.emojis.fire} **${userData.messages}** mensagens`,
         inline: false
       });
     }
@@ -78,12 +76,10 @@ export default {
     const userPosition = leaderboard.findIndex(u => u.userId === interaction.user.id) + 1;
     if (userPosition > 0 && (userPosition < startIndex + 1 || userPosition > startIndex + pageSize)) {
       const userData = db.getUser(interaction.guild.id, interaction.user.id);
-      const totalXP = userData.chatXP + userData.voiceXP;
-      const chatLevel = getLevelFromXP(userData.chatXP);
-      const voiceLevel = getLevelFromXP(userData.voiceXP);
+      const level = getLevelFromXP(userData.chatXP);
       embed.addFields({
         name: '\u200b',
-        value: `**Sua Posição:** #${userPosition} • ${totalXP} XP Total • Chat Nv${chatLevel} • Voice Nv${voiceLevel}`
+        value: `**Sua Posição no Chat:** #${userPosition} • Nível ${level} • ${userData.chatXP} XP`
       });
     }
     

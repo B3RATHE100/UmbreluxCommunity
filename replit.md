@@ -1,14 +1,17 @@
 # Veil Discord Bot
 
 ## Visão Geral
-Bot de Discord com tema do mangá Veil que gerencia um sistema completo de níveis, XP e cargos de recompensa para o servidor Umbrelux.
+Bot de Discord com tema do mangá Veil que gerencia um sistema completo de níveis separados (chat e voice), XP e cargos de recompensa para o servidor Umbrelux.
 
 ## Funcionalidades Principais
 - **Mensagem de Boas-vindas**: Mensagens automáticas em embed estilizado quando novos membros entram
-- **Sistema de Níveis**: Ganhe XP por mensagens em chat e tempo em voice calls
-- **Cargos de Recompensa**: Ganhe cargos automaticamente ao alcançar certos níveis
-- **Comandos**: `/perfil`, `/rank`, `/config` (admin)
-- **Painel Admin**: Interface com botões e menus para configurar recompensas
+- **Sistema de Níveis Dual**:
+  - **Chat**: Ganhe XP conversando nos canais de texto
+  - **Voice**: Ganhe XP participando de calls de voz
+- **Cargos de Recompensa Separados**: Configure cargos diferentes para níveis de chat e voice
+- **Sistema de Recompensa Diária**: Colete XP diário com bônus de sequência
+- **Sistema de Conquistas**: Desbloqueie conquistas especiais por atividades
+- **11 Comandos Únicos**: Sistema completo de comandos para perfil, ranking, conquistas e mais
 
 ## Estrutura do Projeto
 ```
@@ -39,5 +42,28 @@ src/
 - Discord.js v14
 - In-memory database (javascript_mem_db integration)
 
+## Comandos Disponíveis
+
+### Comandos de Perfil e Progresso
+- `/perfil` - Veja seu perfil completo (chat + voice)
+- `/perfil-chat` - Veja apenas seu progresso de chat
+- `/perfil-voice` - Veja apenas seu progresso de voice
+
+### Comandos de Ranking
+- `/rank` - Ranking geral combinado do servidor
+- `/top-chat` - Ranking de membros mais ativos em chat
+- `/top-voice` - Ranking de membros mais ativos em voice
+
+### Comandos de Recompensas e Conquistas
+- `/daily` - Colete sua recompensa diária de XP
+- `/conquistas` - Veja suas conquistas desbloqueadas
+
+### Comandos Utilitários
+- `/avatar` - Veja o avatar de qualquer usuário em HD
+- `/serverinfo` - Informações detalhadas sobre o servidor
+
+### Comandos de Administração
+- `/config` - Painel completo de configuração (apenas admins)
+
 ## Última Atualização
-23 de novembro de 2025 - Criação inicial do projeto
+23 de novembro de 2025 - Sistema de níveis separados (chat/voice) implementado com 11 comandos

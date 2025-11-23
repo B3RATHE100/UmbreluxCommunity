@@ -1,6 +1,7 @@
+import { EmbedBuilder } from 'discord.js';
 import { db } from '../database.js';
 import { config } from '../config.js';
-import { grantXP } from '../utils/levelSystem.js';
+import { grantVoiceXP } from '../utils/levelSystem.js';
 import { checkAndGrantRoleRewards } from '../utils/roleRewards.js';
 
 export default {
@@ -24,17 +25,54 @@ export default {
         const minutes = Math.floor(duration / 60000);
         if (minutes > 0) {
           const xpAmount = minutes * config.xp.voicePerMinute;
-          const result = await grantXP(oldState.guild, member, xpAmount, 'voice');
+          const result = await grantVoiceXP(oldState.guild, member, xpAmount);
           
           if (result.levelUp && result.levelUp.leveledUp) {
-            await checkAndGrantRoleRewards(
+            const newLevel = result.levelUp.newLevel;
+            
+            const roleRewards = await checkAndGrantRoleRewards(
               oldState.guild,
               member,
-              result.levelUp.newLevel
+              newLevel,
+              'voice'
             );
+            
+            const embed = new EmbedBuilder()
+              .setColor(config.colors.veil)
+              .setTitle(`${config.emojis.star} Level Up de Voice!`)
+              .setDescription(
+                `Parabéns ${member.toString()}!\n\n` +
+                `Você alcançou o **Nível ${newLevel} de Voice**! 🎙️\n` +
+                `XP de Voice Total: **${result.totalXP}**`
+              )
+              .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+              .setTimestamp();
+            
+            if (roleRewards.length > 0) {
+              const rolesText = roleRewards.map(r => r.role.toString()).join(', ');
+              embed.addFields({
+                name: `${config.emojis.crown} Novos Cargos Desbloqueados!`,
+                value: rolesText
+              });
+            }
+            
+            const guildConfig = db.getGuildConfig(oldState.guild.id);
+            let levelUpChannel = null;
+            
+            if (guildConfig.levelUpChannelId) {
+              levelUpChannel = oldState.guild.channels.cache.get(guildConfig.levelUpChannelId);
+            }
+            
+            if (levelUpChannel) {
+              try {
+                await levelUpChannel.send({ embeds: [embed] });
+              } catch (error) {
+                console.error('Erro ao enviar mensagem de level up:', error);
+              }
+            }
           }
           
-          console.log(`${member.user.tag} ganhou ${xpAmount} XP por ${minutes} minutos em call`);
+          console.log(`${member.user.tag} ganhou ${xpAmount} XP de voice por ${minutes} minutos em call`);
         }
       }
     }
@@ -46,7 +84,7 @@ export default {
         const minutes = Math.floor(duration / 60000);
         if (minutes > 0) {
           const xpAmount = minutes * config.xp.voicePerMinute;
-          await grantXP(oldState.guild, member, xpAmount, 'voice');
+          await grantVoiceXP(oldState.guild, member, xpAmount);
         }
       }
       

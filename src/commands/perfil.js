@@ -20,63 +20,80 @@ export default {
     const member = await interaction.guild.members.fetch(targetUser.id);
     
     const userData = db.getUser(interaction.guild.id, targetUser.id);
-    const progress = getProgressToNextLevel(userData.xp);
-    const progressBar = createProgressBar(progress.currentXP, progress.requiredXP, 15);
+    const chatProgress = getProgressToNextLevel(userData.chatXP);
+    const voiceProgress = getProgressToNextLevel(userData.voiceXP);
     
-    const nextReward = getNextRoleReward(interaction.guild.id, progress.currentLevel);
+    const chatProgressBar = createProgressBar(chatProgress.currentXP, chatProgress.requiredXP, 12);
+    const voiceProgressBar = createProgressBar(voiceProgress.currentXP, voiceProgress.requiredXP, 12);
+    
+    const nextChatReward = getNextRoleReward(interaction.guild.id, chatProgress.currentLevel, 'chat');
+    const nextVoiceReward = getNextRoleReward(interaction.guild.id, voiceProgress.currentLevel, 'voice');
+    
+    const totalXP = userData.chatXP + userData.voiceXP;
     
     const embed = new EmbedBuilder()
       .setColor(config.colors.veil)
-      .setTitle(`${config.emojis.shield} Perfil de ${targetUser.username}`)
+      .setTitle(`${config.emojis.shield} Perfil Completo - ${targetUser.username}`)
+      .setDescription(`**XP Total Combinado:** ${totalXP}`)
       .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 256 }))
       .addFields(
         {
-          name: `${config.emojis.trophy} Nível`,
-          value: `**${progress.currentLevel}**`,
+          name: `${config.emojis.fire} Chat`,
+          value: 
+            `**Nível:** ${chatProgress.currentLevel}\n` +
+            `**XP:** ${userData.chatXP}\n` +
+            `**Mensagens:** ${userData.messages}`,
           inline: true
         },
         {
-          name: `${config.emojis.star} XP Total`,
-          value: `**${userData.xp}**`,
+          name: '🎙️ Voice',
+          value: 
+            `**Nível:** ${voiceProgress.currentLevel}\n` +
+            `**XP:** ${userData.voiceXP}\n` +
+            `**Tempo:** ${Math.floor(userData.voiceTime / 60000)} min`,
           inline: true
         },
         {
-          name: `${config.emojis.fire} Mensagens`,
-          value: `**${userData.messages}**`,
+          name: '\u200b',
+          value: '\u200b',
           inline: true
         },
         {
-          name: `📊 Progresso para Nível ${progress.nextLevel}`,
-          value: `${progressBar}\n${progress.currentXP}/${progress.requiredXP} XP`
+          name: `📊 Progresso de Chat (Nível ${chatProgress.nextLevel})`,
+          value: `${chatProgressBar}\n${chatProgress.currentXP}/${chatProgress.requiredXP} XP`
+        },
+        {
+          name: `📊 Progresso de Voice (Nível ${voiceProgress.nextLevel})`,
+          value: `${voiceProgressBar}\n${voiceProgress.currentXP}/${voiceProgress.requiredXP} XP`
         }
       )
       .setFooter({ 
-        text: `Continue conversando e participando em calls para ganhar mais XP!`,
+        text: `Use /perfil-chat ou /perfil-voice para mais detalhes`,
         iconURL: interaction.guild.iconURL()
       })
       .setTimestamp();
     
-    if (nextReward) {
-      const role = interaction.guild.roles.cache.get(nextReward.roleId);
-      if (role) {
+    if (nextChatReward || nextVoiceReward) {
+      let rewardsText = '';
+      if (nextChatReward) {
+        const role = interaction.guild.roles.cache.get(nextChatReward.roleId);
+        if (role) {
+          rewardsText += `💬 **Chat Nível ${nextChatReward.level}**: ${role.toString()}\n`;
+        }
+      }
+      if (nextVoiceReward) {
+        const role = interaction.guild.roles.cache.get(nextVoiceReward.roleId);
+        if (role) {
+          rewardsText += `🎙️ **Voice Nível ${nextVoiceReward.level}**: ${role.toString()}`;
+        }
+      }
+      
+      if (rewardsText) {
         embed.addFields({
-          name: `${config.emojis.crown} Próxima Recompensa`,
-          value: `**Nível ${nextReward.level}**: ${role.toString()}`
+          name: `${config.emojis.crown} Próximas Recompensas`,
+          value: rewardsText
         });
       }
-    }
-    
-    const currentRoles = member.roles.cache
-      .filter(role => role.id !== interaction.guild.id)
-      .sort((a, b) => b.position - a.position)
-      .map(role => role.toString())
-      .slice(0, 10);
-    
-    if (currentRoles.length > 0) {
-      embed.addFields({
-        name: '🎭 Cargos Atuais',
-        value: currentRoles.join(', ')
-      });
     }
     
     await interaction.reply({ embeds: [embed] });

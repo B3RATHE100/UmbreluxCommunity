@@ -95,15 +95,17 @@ async function handleButtonInteraction(interaction) {
   
   if (customId === 'view_profile') {
     const userData = db.getUser(interaction.guild.id, interaction.user.id);
-    const progress = getProgressToNextLevel(userData.xp);
+    const chatProgress = getProgressToNextLevel(userData.chatXP);
+    const voiceProgress = getProgressToNextLevel(userData.voiceXP);
     
     const embed = new EmbedBuilder()
       .setColor(config.colors.veil)
       .setTitle(`${config.emojis.shield} Seu Perfil`)
       .setDescription(
-        `**Nível:** ${progress.currentLevel}\n` +
-        `**XP Total:** ${userData.xp}\n` +
-        `**Progresso:** ${progress.currentXP}/${progress.requiredXP} XP (${progress.percentage}%)\n\n` +
+        `**Chat:**\n` +
+        `Nível ${chatProgress.currentLevel} • ${userData.chatXP} XP\n\n` +
+        `**Voice:**\n` +
+        `Nível ${voiceProgress.currentLevel} • ${userData.voiceXP} XP\n\n` +
         `Use \`/perfil\` para mais detalhes!`
       )
       .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }));
@@ -154,14 +156,14 @@ async function handleSelectMenuInteraction(interaction) {
       await interaction.showModal(modal);
     }
     
-    if (selected === 'add_role_reward') {
+    if (selected === 'add_chat_reward') {
       const modal = new ModalBuilder()
-        .setCustomId('modal_add_reward')
-        .setTitle('Adicionar Recompensa de Cargo');
+        .setCustomId('modal_add_chat_reward')
+        .setTitle('Adicionar Recompensa de Chat');
       
       const levelInput = new TextInputBuilder()
         .setCustomId('level')
-        .setLabel('Nível Necessário')
+        .setLabel('Nível de Chat Necessário')
         .setPlaceholder('Ex: 5')
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
@@ -181,14 +183,59 @@ async function handleSelectMenuInteraction(interaction) {
       await interaction.showModal(modal);
     }
     
-    if (selected === 'remove_role_reward') {
+    if (selected === 'add_voice_reward') {
       const modal = new ModalBuilder()
-        .setCustomId('modal_remove_reward')
-        .setTitle('Remover Recompensa de Cargo');
+        .setCustomId('modal_add_voice_reward')
+        .setTitle('Adicionar Recompensa de Voice');
       
       const levelInput = new TextInputBuilder()
         .setCustomId('level')
-        .setLabel('Nível da Recompensa para Remover')
+        .setLabel('Nível de Voice Necessário')
+        .setPlaceholder('Ex: 5')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+      
+      const roleInput = new TextInputBuilder()
+        .setCustomId('role_id')
+        .setLabel('ID do Cargo')
+        .setPlaceholder('Cole o ID do cargo aqui')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+      
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(levelInput),
+        new ActionRowBuilder().addComponents(roleInput)
+      );
+      
+      await interaction.showModal(modal);
+    }
+    
+    if (selected === 'remove_chat_reward') {
+      const modal = new ModalBuilder()
+        .setCustomId('modal_remove_chat_reward')
+        .setTitle('Remover Recompensa de Chat');
+      
+      const levelInput = new TextInputBuilder()
+        .setCustomId('level')
+        .setLabel('Nível de Chat da Recompensa')
+        .setPlaceholder('Ex: 5')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+      
+      const row = new ActionRowBuilder().addComponents(levelInput);
+      modal.addComponents(row);
+      
+      await interaction.showModal(modal);
+    }
+    
+    if (selected === 'remove_voice_reward') {
+      const modal = new ModalBuilder()
+        .setCustomId('modal_remove_voice_reward')
+        .setTitle('Remover Recompensa de Voice');
+      
+      const levelInput = new TextInputBuilder()
+        .setCustomId('level')
+        .setLabel('Nível de Voice da Recompensa')
         .setPlaceholder('Ex: 5')
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
@@ -202,11 +249,27 @@ async function handleSelectMenuInteraction(interaction) {
     if (selected === 'view_rewards') {
       const guildConfig = db.getGuildConfig(interaction.guild.id);
       
+      const chatRewards = formatRoleRewardsList(interaction.guild, guildConfig.chatRoleRewards, 'chat');
+      const voiceRewards = formatRoleRewardsList(interaction.guild, guildConfig.voiceRoleRewards, 'voice');
+      
       const embed = new EmbedBuilder()
         .setColor(config.colors.primary)
-        .setTitle(`${config.emojis.crown} Recompensas de Cargo Configuradas`)
-        .setDescription(formatRoleRewardsList(interaction.guild, guildConfig.roleRewards))
-        .setFooter({ text: `Total: ${guildConfig.roleRewards.length} recompensa(s)` });
+        .setTitle(`${config.emojis.crown} Recompensas Configuradas`)
+        .addFields(
+          {
+            name: `${config.emojis.fire} Recompensas de Chat`,
+            value: chatRewards,
+            inline: false
+          },
+          {
+            name: '🎙️ Recompensas de Voice',
+            value: voiceRewards,
+            inline: false
+          }
+        )
+        .setFooter({ 
+          text: `Total: ${guildConfig.chatRoleRewards.length} chat, ${guildConfig.voiceRoleRewards.length} voice` 
+        });
       
       await interaction.reply({ embeds: [embed], ephemeral: true });
     }
@@ -263,7 +326,7 @@ async function handleModalSubmit(interaction) {
     });
   }
   
-  if (customId === 'modal_add_reward') {
+  if (customId === 'modal_add_chat_reward') {
     const level = parseInt(interaction.fields.getTextInputValue('level').trim());
     const roleId = interaction.fields.getTextInputValue('role_id').trim();
     
@@ -283,15 +346,43 @@ async function handleModalSubmit(interaction) {
       });
     }
     
-    db.addRoleReward(interaction.guild.id, level, roleId);
+    db.addRoleReward(interaction.guild.id, level, roleId, 'chat');
     
     await interaction.reply({ 
-      content: `✅ Recompensa adicionada! Nível **${level}** → ${role.toString()}`, 
+      content: `✅ Recompensa de Chat adicionada! Nível **${level}** → ${role.toString()}`, 
       ephemeral: true 
     });
   }
   
-  if (customId === 'modal_remove_reward') {
+  if (customId === 'modal_add_voice_reward') {
+    const level = parseInt(interaction.fields.getTextInputValue('level').trim());
+    const roleId = interaction.fields.getTextInputValue('role_id').trim();
+    
+    if (isNaN(level) || level < 1) {
+      return interaction.reply({ 
+        content: '❌ Nível inválido! Use um número maior que 0.', 
+        ephemeral: true 
+      });
+    }
+    
+    const role = interaction.guild.roles.cache.get(roleId);
+    
+    if (!role) {
+      return interaction.reply({ 
+        content: '❌ Cargo não encontrado! Verifique se o ID está correto.', 
+        ephemeral: true 
+      });
+    }
+    
+    db.addRoleReward(interaction.guild.id, level, roleId, 'voice');
+    
+    await interaction.reply({ 
+      content: `✅ Recompensa de Voice adicionada! Nível **${level}** → ${role.toString()}`, 
+      ephemeral: true 
+    });
+  }
+  
+  if (customId === 'modal_remove_chat_reward') {
     const level = parseInt(interaction.fields.getTextInputValue('level').trim());
     
     if (isNaN(level) || level < 1) {
@@ -301,10 +392,28 @@ async function handleModalSubmit(interaction) {
       });
     }
     
-    db.removeRoleReward(interaction.guild.id, level);
+    db.removeRoleReward(interaction.guild.id, level, 'chat');
     
     await interaction.reply({ 
-      content: `✅ Recompensa do nível **${level}** removida!`, 
+      content: `✅ Recompensa de Chat do nível **${level}** removida!`, 
+      ephemeral: true 
+    });
+  }
+  
+  if (customId === 'modal_remove_voice_reward') {
+    const level = parseInt(interaction.fields.getTextInputValue('level').trim());
+    
+    if (isNaN(level) || level < 1) {
+      return interaction.reply({ 
+        content: '❌ Nível inválido! Use um número maior que 0.', 
+        ephemeral: true 
+      });
+    }
+    
+    db.removeRoleReward(interaction.guild.id, level, 'voice');
+    
+    await interaction.reply({ 
+      content: `✅ Recompensa de Voice do nível **${level}** removida!`, 
       ephemeral: true 
     });
   }

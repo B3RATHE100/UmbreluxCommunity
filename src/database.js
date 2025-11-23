@@ -11,11 +11,15 @@ class Database {
       this.users.set(key, {
         userId,
         guildId,
-        xp: 0,
-        level: 0,
+        chatXP: 0,
+        chatLevel: 0,
+        voiceXP: 0,
+        voiceLevel: 0,
         messages: 0,
         voiceTime: 0,
-        lastMessageTime: 0
+        lastMessageTime: 0,
+        lastDailyTime: 0,
+        dailyStreak: 0
       });
     }
     return this.users.get(key);
@@ -28,17 +32,42 @@ class Database {
     return this.users.get(key);
   }
 
-  addXP(guildId, userId, amount) {
+  addChatXP(guildId, userId, amount) {
     const user = this.getUser(guildId, userId);
-    user.xp += amount;
+    user.chatXP += amount;
     this.users.set(`${guildId}-${userId}`, user);
     return user;
+  }
+
+  addVoiceXP(guildId, userId, amount) {
+    const user = this.getUser(guildId, userId);
+    user.voiceXP += amount;
+    this.users.set(`${guildId}-${userId}`, user);
+    return user;
+  }
+
+  getChatLeaderboard(guildId, limit = 10) {
+    const guildUsers = Array.from(this.users.values())
+      .filter(user => user.guildId === guildId)
+      .sort((a, b) => b.chatXP - a.chatXP)
+      .slice(0, limit);
+    
+    return guildUsers;
+  }
+
+  getVoiceLeaderboard(guildId, limit = 10) {
+    const guildUsers = Array.from(this.users.values())
+      .filter(user => user.guildId === guildId)
+      .sort((a, b) => b.voiceXP - a.voiceXP)
+      .slice(0, limit);
+    
+    return guildUsers;
   }
 
   getLeaderboard(guildId, limit = 10) {
     const guildUsers = Array.from(this.users.values())
       .filter(user => user.guildId === guildId)
-      .sort((a, b) => b.xp - a.xp)
+      .sort((a, b) => (b.chatXP + b.voiceXP) - (a.chatXP + a.voiceXP))
       .slice(0, limit);
     
     return guildUsers;
@@ -47,7 +76,8 @@ class Database {
   getGuildConfig(guildId) {
     if (!this.guilds.has(guildId)) {
       this.guilds.set(guildId, {
-        roleRewards: [],
+        chatRoleRewards: [],
+        voiceRoleRewards: [],
         welcomeChannelId: null,
         levelUpChannelId: null
       });
@@ -61,25 +91,28 @@ class Database {
     return this.guilds.get(guildId);
   }
 
-  addRoleReward(guildId, level, roleId) {
+  addRoleReward(guildId, level, roleId, type = 'chat') {
     const config = this.getGuildConfig(guildId);
-    config.roleRewards = config.roleRewards.filter(r => r.level !== level);
-    config.roleRewards.push({ level, roleId });
-    config.roleRewards.sort((a, b) => a.level - b.level);
+    const rewardKey = type === 'chat' ? 'chatRoleRewards' : 'voiceRoleRewards';
+    config[rewardKey] = config[rewardKey].filter(r => r.level !== level);
+    config[rewardKey].push({ level, roleId });
+    config[rewardKey].sort((a, b) => a.level - b.level);
     this.guilds.set(guildId, config);
     return config;
   }
 
-  removeRoleReward(guildId, level) {
+  removeRoleReward(guildId, level, type = 'chat') {
     const config = this.getGuildConfig(guildId);
-    config.roleRewards = config.roleRewards.filter(r => r.level !== level);
+    const rewardKey = type === 'chat' ? 'chatRoleRewards' : 'voiceRoleRewards';
+    config[rewardKey] = config[rewardKey].filter(r => r.level !== level);
     this.guilds.set(guildId, config);
     return config;
   }
 
-  getRoleRewardsForLevel(guildId, level) {
+  getRoleRewardsForLevel(guildId, level, type = 'chat') {
     const config = this.getGuildConfig(guildId);
-    return config.roleRewards.filter(r => r.level <= level);
+    const rewardKey = type === 'chat' ? 'chatRoleRewards' : 'voiceRoleRewards';
+    return config[rewardKey].filter(r => r.level <= level);
   }
 
   startVoiceTracking(guildId, userId) {

@@ -1,7 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 import { config } from '../config.js';
 import { db } from '../database.js';
-import { grantXP } from '../utils/levelSystem.js';
+import { grantChatXP } from '../utils/levelSystem.js';
 import { checkAndGrantRoleRewards } from '../utils/roleRewards.js';
 
 export default {
@@ -26,7 +26,7 @@ export default {
       Math.random() * (config.xp.messageMax - config.xp.messageMin + 1) + config.xp.messageMin
     );
     
-    const result = await grantXP(message.guild, message.member, xpAmount, 'message');
+    const result = await grantChatXP(message.guild, message.member, xpAmount);
     
     if (result.levelUp && result.levelUp.leveledUp) {
       const newLevel = result.levelUp.newLevel;
@@ -34,16 +34,17 @@ export default {
       const roleRewards = await checkAndGrantRoleRewards(
         message.guild, 
         message.member, 
-        newLevel
+        newLevel,
+        'chat'
       );
       
       const embed = new EmbedBuilder()
         .setColor(config.colors.success)
-        .setTitle(`${config.emojis.levelUp} Level Up!`)
+        .setTitle(`${config.emojis.fire} Level Up de Chat!`)
         .setDescription(
           `Parabéns ${message.author.toString()}!\n\n` +
-          `Você alcançou o **Nível ${newLevel}**! ${config.emojis.trophy}\n` +
-          `XP Total: **${result.totalXP}**`
+          `Você alcançou o **Nível ${newLevel} de Chat**! ${config.emojis.trophy}\n` +
+          `XP de Chat Total: **${result.totalXP}**`
         )
         .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
         .setTimestamp();

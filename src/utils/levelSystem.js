@@ -21,29 +21,55 @@ export function checkLevelUp(oldXP, newXP) {
   return { leveledUp: false };
 }
 
-export async function grantXP(guild, member, amount, reason = 'message') {
+export async function grantChatXP(guild, member, amount) {
   const userData = db.getUser(guild.id, member.id);
-  const oldXP = userData.xp;
+  const oldXP = userData.chatXP;
   
-  db.addXP(guild.id, member.id, amount);
+  db.addChatXP(guild.id, member.id, amount);
   const newUserData = db.getUser(guild.id, member.id);
-  const levelCheck = checkLevelUp(oldXP, newUserData.xp);
+  const levelCheck = checkLevelUp(oldXP, newUserData.chatXP);
   
   if (levelCheck.leveledUp) {
-    db.updateUser(guild.id, member.id, { level: levelCheck.newLevel });
+    db.updateUser(guild.id, member.id, { chatLevel: levelCheck.newLevel });
     return {
       xpGained: amount,
-      totalXP: newUserData.xp,
+      totalXP: newUserData.chatXP,
       levelUp: levelCheck,
-      reason
+      type: 'chat'
     };
   }
   
   return {
     xpGained: amount,
-    totalXP: newUserData.xp,
+    totalXP: newUserData.chatXP,
     levelUp: null,
-    reason
+    type: 'chat'
+  };
+}
+
+export async function grantVoiceXP(guild, member, amount) {
+  const userData = db.getUser(guild.id, member.id);
+  const oldXP = userData.voiceXP;
+  
+  db.addVoiceXP(guild.id, member.id, amount);
+  const newUserData = db.getUser(guild.id, member.id);
+  const levelCheck = checkLevelUp(oldXP, newUserData.voiceXP);
+  
+  if (levelCheck.leveledUp) {
+    db.updateUser(guild.id, member.id, { voiceLevel: levelCheck.newLevel });
+    return {
+      xpGained: amount,
+      totalXP: newUserData.voiceXP,
+      levelUp: levelCheck,
+      type: 'voice'
+    };
+  }
+  
+  return {
+    xpGained: amount,
+    totalXP: newUserData.voiceXP,
+    levelUp: null,
+    type: 'voice'
   };
 }
 
