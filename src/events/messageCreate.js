@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { config } from '../config.js';
+import { config, getLevelFromXP } from '../config.js';
 import { db } from '../database.js';
 import { grantChatXP } from '../utils/levelSystem.js';
 import { checkAndGrantRoleRewards } from '../utils/roleRewards.js';
@@ -27,6 +27,13 @@ export default {
     );
     
     const result = await grantChatXP(message.guild, message.member, xpAmount);
+    
+    // Atualizar nível em tempo real
+    const updatedUserData = db.getUser(message.guild.id, message.author.id);
+    const currentChatLevel = getLevelFromXP(updatedUserData.chatXP);
+    if (updatedUserData.chatLevel !== currentChatLevel) {
+      db.updateUser(message.guild.id, message.author.id, { chatLevel: currentChatLevel });
+    }
     
     if (result.levelUp && result.levelUp.leveledUp) {
       const newLevel = result.levelUp.newLevel;

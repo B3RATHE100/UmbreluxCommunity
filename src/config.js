@@ -1,10 +1,12 @@
+
 export const config = {
   colors: {
     primary: 0x8c13e0,
     success: 0x57f287,
     warning: 0xfee75c,
     error: 0xed4245,
-    veil: 0x9b59b6
+    veil: 0x9b59b6,
+    fire: 0xff6b35
   },
   
   xp: {
@@ -17,7 +19,7 @@ export const config = {
   
   levels: {
     baseXP: 100,
-    multiplier: 1.5
+    multiplier: 1.2
   },
   
   emojis: {
@@ -34,16 +36,28 @@ export const config = {
 };
 
 export function getXPForLevel(level) {
+  if (level <= 0) return 0;
   return Math.floor(config.levels.baseXP * Math.pow(level, config.levels.multiplier));
 }
 
+export function getTotalXPForLevel(level) {
+  if (level <= 0) return 0;
+  let total = 0;
+  for (let i = 1; i <= level; i++) {
+    total += getXPForLevel(i);
+  }
+  return total;
+}
+
 export function getLevelFromXP(xp) {
-  let level = 0;
-  let totalXP = 0;
+  if (xp <= 0) return 0;
   
-  while (totalXP <= xp) {
+  let level = 0;
+  let totalXPNeeded = 0;
+  
+  while (totalXPNeeded <= xp) {
     level++;
-    totalXP += getXPForLevel(level);
+    totalXPNeeded += getXPForLevel(level);
   }
   
   return level - 1;
@@ -51,14 +65,14 @@ export function getLevelFromXP(xp) {
 
 export function getProgressToNextLevel(xp) {
   const currentLevel = getLevelFromXP(xp);
-  const xpForCurrentLevel = Array.from({ length: currentLevel }, (_, i) => getXPForLevel(i + 1)).reduce((a, b) => a + b, 0);
+  const xpForCurrentLevel = getTotalXPForLevel(currentLevel);
   const xpForNextLevel = getXPForLevel(currentLevel + 1);
   const currentLevelXP = xp - xpForCurrentLevel;
   
   return {
     currentLevel,
     nextLevel: currentLevel + 1,
-    currentXP: currentLevelXP,
+    currentXP: Math.max(0, currentLevelXP),
     requiredXP: xpForNextLevel,
     percentage: Math.floor((currentLevelXP / xpForNextLevel) * 100)
   };

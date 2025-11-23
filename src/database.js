@@ -42,6 +42,8 @@ class Database {
   addVoiceXP(guildId, userId, amount) {
     const user = this.getUser(guildId, userId);
     user.voiceXP += amount;
+    // Assumir que cada XP de voice = 1 minuto (10 XP por minuto)
+    user.voiceTime += (amount / 10) * 60000; // converter para ms
     this.users.set(`${guildId}-${userId}`, user);
     return user;
   }
