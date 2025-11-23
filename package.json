@@ -1,0 +1,23 @@
+{
+  "name": "veil-discord-bot",
+  "version": "1.0.0",
+  "description": "Bot de Discord com sistema de níveis e cargos para servidor temático do mangá Veil",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "levels",
+    "xp",
+    "veil"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.25.1"
+  }
+}
