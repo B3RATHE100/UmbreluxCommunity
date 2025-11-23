@@ -117,6 +117,72 @@ async function handleButtonInteraction(interaction) {
 async function handleSelectMenuInteraction(interaction) {
   const { customId, values } = interaction;
   
+  if (customId === 'welcome_actions') {
+    const selected = values[0];
+    
+    if (selected === 'view_rules') {
+      const embed = new EmbedBuilder()
+        .setColor(config.colors.primary)
+        .setTitle('📋 Regras do Servidor')
+        .setDescription(
+          'Bem-vindo! Aqui estão as regras básicas:\n\n' +
+          '1️⃣ Respeite todos os membros\n' +
+          '2️⃣ Sem spam ou flood\n' +
+          '3️⃣ Mantenha os canais organizados\n' +
+          '4️⃣ Divirta-se e seja ativo!\n\n' +
+          'Use `/perfil` para ver seu progresso!'
+        );
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+    
+    if (selected === 'get_started') {
+      const embed = new EmbedBuilder()
+        .setColor(config.colors.success)
+        .setTitle('🎮 Como Começar')
+        .setDescription(
+          `**Sistema de Níveis:**\n` +
+          `${config.emojis.fire} Ganhe XP conversando nos chats\n` +
+          `${config.emojis.star} Ganhe XP participando de calls de voz\n` +
+          `${config.emojis.trophy} Suba de nível e ganhe cargos exclusivos!\n\n` +
+          `**Comandos Úteis:**\n` +
+          `\`/perfil\` - Veja seu nível e progresso\n` +
+          `\`/rank\` - Veja o ranking do servidor\n\n` +
+          `**Dicas:**\n` +
+          `• Seja ativo para ganhar mais XP\n` +
+          `• Participe das calls para XP bônus\n` +
+          `• Interaja com a comunidade!`
+        );
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+    
+    if (selected === 'view_profile') {
+      const userData = db.getUser(interaction.user.id, interaction.guild.id);
+      const progress = getProgressToNextLevel(userData.chatXP);
+      
+      const embed = new EmbedBuilder()
+        .setColor(config.colors.primary)
+        .setTitle('📊 Seu Perfil')
+        .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }))
+        .addFields(
+          {
+            name: `${config.emojis.fire} Nível de Chat`,
+            value: `**${progress.currentLevel}** (${progress.currentXP}/${progress.requiredXP} XP)`,
+            inline: true
+          },
+          {
+            name: `${config.emojis.star} XP Total`,
+            value: `**${userData.chatXP.toLocaleString()}**`,
+            inline: true
+          }
+        )
+        .setFooter({ text: `Use /perfil para ver mais detalhes!` });
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+  }
+  
   if (customId === 'config_select') {
     const selected = values[0];
     

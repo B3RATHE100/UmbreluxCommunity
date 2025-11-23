@@ -1,4 +1,4 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } from 'discord.js';
 import { config } from '../config.js';
 import { db } from '../database.js';
 
@@ -27,24 +27,24 @@ export default {
 
     // Primeira imagem - banner de boas-vindas
     const welcomeBannerEmbed = new EmbedBuilder()
-      .setColor(0x8BB9FE)
+      .setColor(0x8B0000)
       .setImage('https://cdn.discordapp.com/attachments/1426648046074335295/1441821961474019388/1763788081783.jpg');
 
     // Texto principal estilizado
     const mainTextEmbed = new EmbedBuilder()
-      .setColor(0x8BB9FE)
+      .setColor(0x8B0000)
       .setDescription(
         `（ᴖ͈𐎟ᴖ͈）𝅙﹒<a:emoji_58:1441724281200578681>𝅙✣𝅙﹒É maravilhoso ver você aqui! Este é um espaço para fazer amizades, se divertir e mergulhar na energia do nosso mundo.﹒𝅙𖹭𝅙𝅙┈𝅙𝅙﹒୨`
       );
 
     // Imagem do separador
     const separatorEmbed = new EmbedBuilder()
-      .setColor(0x8BB9FE)
+      .setColor(0x8B0000)
       .setImage('https://www.imagensanimadas.com/data/media/1081/linha-de-natal-imagem-animada-0045.gif');
 
     // Instruções detalhadas
     const instructionsEmbed = new EmbedBuilder()
-      .setColor(0x8BB9FE)
+      .setColor(0x8B0000)
       .setDescription(
         `バ𝅙﹒𝅙๑<a:emoji_59:1441724362729328691>﹒𝅙**[Registre-se](https://discord.com/channels/1321841848670490674/1438400416781041778)** no canal de registro para que possamos te conhecer melhor. ﹒𝅙海𝅙◞𝅙𝅙空 \n` +
         `バ𝅙﹒𝅙๑<a:emoji_60:1441724423005798430>﹒𝅙**[Escolha sua cor](https://discord.com/channels/1321841848670490674/1438400543398821938)** visitando o canal de cores.﹒𝅙海𝅙◞𝅙𝅙空  \n` +
@@ -54,31 +54,39 @@ export default {
         `-# ➻﹒𝅙១<a:emoji_64:1441726976674103407>﹒合𝅙𝅙𝅙⸻  **Participe, divirta-se e faça sua presença brilhar.**﹒バ﹒✦`
       );
 
-    // Imagem final (será substituída por uma imagem do servidor se disponível)
+    // Imagem final - sem avatar do servidor
     const finalImageEmbed = new EmbedBuilder()
-      .setColor(0x8BB9FE)
-      .setImage(member.guild.iconURL({ size: 512 }) || 'https://via.placeholder.com/512x256/8BB9FE/FFFFFF?text=Bem-vindo!')
+      .setColor(0x8B0000)
       .setFooter({ 
-        text: `Membro #${member.guild.memberCount}`,
-        iconURL: member.guild.iconURL() 
+        text: `Membro #${member.guild.memberCount}`
       })
       .setTimestamp();
 
-    const row = new ActionRowBuilder()
-      .addComponents(
-        new ButtonBuilder()
-          .setLabel('📋 Ver Regras')
-          .setStyle(ButtonStyle.Primary)
-          .setCustomId('view_rules'),
-        new ButtonBuilder()
-          .setLabel('🎮 Começar')
-          .setStyle(ButtonStyle.Success)
-          .setCustomId('get_started'),
-        new ButtonBuilder()
-          .setLabel('📊 Meu Perfil')
-          .setStyle(ButtonStyle.Secondary)
-          .setCustomId('view_profile')
+    const selectMenu = new StringSelectMenuBuilder()
+      .setCustomId('welcome_actions')
+      .setPlaceholder('Selecione uma opção para começar...')
+      .addOptions(
+        {
+          label: 'Ver Regras',
+          description: 'Confira as regras do servidor',
+          value: 'view_rules',
+          emoji: '<a:emoji_58:1441724281200578681>'
+        },
+        {
+          label: 'Começar',
+          description: 'Aprenda sobre o sistema de níveis',
+          value: 'get_started',
+          emoji: '<a:emoji_59:1441724362729328691>'
+        },
+        {
+          label: 'Meu Perfil',
+          description: 'Veja seu perfil e progresso',
+          value: 'view_profile',
+          emoji: '<a:emoji_60:1441724423005798430>'
+        }
       );
+
+    const row = new ActionRowBuilder().addComponents(selectMenu);
 
     try {
       await welcomeChannel.send({ 
