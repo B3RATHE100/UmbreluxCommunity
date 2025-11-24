@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, Collection, REST, Routes } from 'discord.js'
 import { readdir } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { db } from './database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -130,6 +131,15 @@ async function main() {
     console.error('Você pode obter o token em: https://discord.com/developers/applications');
     process.exit(1);
   }
+
+  try {
+    console.log('🗄️  Inicializando banco de dados...');
+    await db.initialize();
+  } catch (error) {
+    console.error('❌ Erro ao inicializar banco de dados:', error.message);
+    console.error('Verifique se a variável de ambiente DATABASE_URL está configurada corretamente.');
+    process.exit(1);
+  }
   
   await loadCommands();
   await loadEvents();
@@ -143,6 +153,7 @@ async function main() {
   } catch (error) {
     console.error('❌ Erro ao fazer login no Discord:', error.message);
     console.error('Verifique se o token está correto e se o bot tem as permissões necessárias.');
+    await db.close();
     process.exit(1);
   }
 }
