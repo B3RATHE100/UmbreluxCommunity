@@ -1,10 +1,11 @@
 import { SlashCommandBuilder, EmbedBuilder, StringSelectMenuBuilder, ActionRowBuilder, PermissionFlagsBits } from 'discord.js';
 import { config } from '../config.js';
+import { db } from '../database.js';
 
 export default {
   data: new SlashCommandBuilder()
     .setName('select-menu')
-    .setDescription('📋 Configure um selecionador personalizado em uma mensagem (Admin)')
+    .setDescription('📋 Configure um selecionador personalizado (Admin)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption(option =>
       option
@@ -35,6 +36,28 @@ export default {
         .setName('link-mensagem')
         .setDescription('Link da mensagem para adicionar selecionador')
         .setRequired(false)
+    )
+    .addStringOption(option =>
+      option
+        .setName('tipo')
+        .setDescription('Tipo de selecionador')
+        .setRequired(false)
+        .addChoices(
+          { name: 'Simples', value: 'simples' },
+          { name: 'Cargos (toggle)', value: 'cargos' }
+        )
+    )
+    .addStringOption(option =>
+      option
+        .setName('descricao')
+        .setDescription('Descrição personalizada')
+        .setRequired(false)
+    )
+    .addStringOption(option =>
+      option
+        .setName('cor')
+        .setDescription('Cor em hex (ex: #9b59b6)')
+        .setRequired(false)
     ),
   
   async execute(interaction) {
@@ -50,6 +73,9 @@ export default {
     const opcoesStr = interaction.options.getString('opcoes');
     const canal = interaction.options.getChannel('canal');
     const linkMensagem = interaction.options.getString('link-mensagem');
+    const tipo = interaction.options.getString('tipo') || 'simples';
+    const descricaoCustom = interaction.options.getString('descricao');
+    const corHex = interaction.options.getString('cor') || '#9b59b6';
 
     const opcoes = opcoesStr.split('|').map((opt, idx) => ({
       label: opt.trim(),
@@ -61,6 +87,15 @@ export default {
         content: '❌ Você precisa de 1 a 25 opções!',
         ephemeral: true
       });
+    }
+
+    let cor = config.colors.veil;
+    if (corHex && corHex.startsWith('#')) {
+      try {
+        cor = parseInt(corHex.substring(1), 16);
+      } catch (e) {
+        cor = config.colors.veil;
+      }
     }
 
     const selectMenu = new StringSelectMenuBuilder()
@@ -78,45 +113,55 @@ export default {
         
         if (!match) {
           return interaction.reply({
-            content: '❌ Link de mensagem inválido! Use: https://discord.com/channels/guildId/channelId/messageId',
+            content: '❌ Link inválido! Use: https://discord.com/channels/guildId/channelId/messageId',
             ephemeral: true
           });
         }
 
-        const channelId = match[1];
-        const messageId = match[2];
-
-        const targetChannel = interaction.guild.channels.cache.get(channelId);
+        const targetChannel = interaction.guild.channels.cache.get(match[1]);
         if (!targetChannel || !targetChannel.isTextBased()) {
           return interaction.reply({
-            content: '❌ Canal não encontrado ou não é um canal de texto!',
+            content: '❌ Canal não encontrado!',
             ephemeral: true
           });
         }
 
         try {
-          msg = await targetChannel.messages.fetch(messageId);
+          msg = await targetChannel.messages.fetch(match[2]);
           const existingComponents = msg.components || [];
           await msg.edit({ components: [...existingComponents, row] });
         } catch (error) {
           return interaction.reply({
-            content: '❌ Não consegui encontrar a mensagem! Verifique o link.',
+            content: '❌ Mensagem não encontrada!',
             ephemeral: true
           });
         }
       } else {
         const embed = new EmbedBuilder()
-          .setColor(config.colors.veil)
+          .setColor(cor)
           .setTitle(`📋 ${titulo}`)
-          .setDescription('Selecione uma opção abaixo');
+          .setDescription(descricaoCustom || 'Selecione uma opção abaixo');
 
         msg = await canal.send({ embeds: [embed], components: [row] });
       }
 
+      const guildConfig = db.getGuildConfig(interaction.guild.id);
+      if (!guildConfig.selectMenus) {
+        guildConfig.selectMenus = {};
+      }
+
+      guildConfig.selectMenus[idMenu] = {
+        type: tipo,
+        opcoes: opcoes,
+        titulo: titulo
+      };
+
+      db.updateGuildConfig(interaction.guild.id, guildConfig);
+
       const confirmEmbed = new EmbedBuilder()
         .setColor(config.colors.success)
         .setTitle('✅ Menu Selecionador Criado!')
-        .setDescription(`Menu **${titulo}** adicionado${linkMensagem ? ' à mensagem' : ' em ' + canal.toString()}\n\n**Opções:** ${opcoes.length}`)
+        .setDescription(`Menu **${titulo}** adicionado${linkMensagem ? ' à mensagem' : ' em ' + canal.toString()}\n\n**Tipo:** ${tipo === 'cargos' ? '🎯 Cargos (toggle)' : '📋 Simples'}\n**Opções:** ${opcoes.length}`)
         .addFields({
           name: 'Opções:',
           value: opcoes.map(o => `• ${o.label}`).join('\n')

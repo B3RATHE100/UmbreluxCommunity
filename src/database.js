@@ -85,7 +85,8 @@ class Database {
         welcomeChannelId: null,
         levelUpChannelId: null,
         shopItems: [],
-        roleButtons: []
+        roleButtons: [],
+        selectMenus: {}
       });
     }
     return this.guilds.get(guildId);
