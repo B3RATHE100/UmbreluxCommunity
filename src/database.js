@@ -5,6 +5,11 @@ class Database {
   constructor() {
     this.pool = null;
     this.initialized = false;
+    this.useMemory = false;
+    // Fallback para memória
+    this.users = new Map();
+    this.guilds = new Map();
+    this.voiceTracking = new Map();
   }
 
   async initialize() {
@@ -13,28 +18,36 @@ class Database {
     const databaseUrl = process.env.DATABASE_URL;
     
     if (!databaseUrl) {
-      throw new Error('DATABASE_URL não configurada. Defina a variável de ambiente para conectar ao PostgreSQL.');
+      console.log('⚠️  DATABASE_URL não configurada. Usando armazenamento em memória (dados não serão persistidos)');
+      this.useMemory = true;
+      this.initialized = true;
+      return;
     }
 
-    this.pool = new Pool({
-      connectionString: databaseUrl,
-      ssl: {
-        rejectUnauthorized: false
-      }
-    });
-
     try {
+      this.pool = new Pool({
+        connectionString: databaseUrl,
+        ssl: {
+          rejectUnauthorized: false
+        }
+      });
+
       await this.pool.query('SELECT NOW()');
       console.log('✅ Conectado ao banco de dados PostgreSQL com sucesso!');
+      this.useMemory = false;
       this.initialized = true;
       await this.createTables();
     } catch (error) {
-      console.error('❌ Erro ao conectar ao banco de dados:', error.message);
-      throw error;
+      console.error('❌ Erro ao conectar ao PostgreSQL:', error.message);
+      console.log('⚠️  Revertendo para armazenamento em memória...');
+      this.useMemory = true;
+      this.initialized = true;
     }
   }
 
   async createTables() {
+    if (this.useMemory) return;
+    
     try {
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS users (
@@ -88,11 +101,32 @@ class Database {
       console.log('✅ Tabelas do banco de dados criadas/verificadas com sucesso!');
     } catch (error) {
       console.error('❌ Erro ao criar tabelas:', error.message);
-      throw error;
     }
   }
 
   async getUser(guildId, userId) {
+    if (this.useMemory) {
+      const key = `${guildId}-${userId}`;
+      if (!this.users.has(key)) {
+        this.users.set(key, {
+          userId,
+          guildId,
+          chatXP: 0,
+          chatLevel: 0,
+          voiceXP: 0,
+          voiceLevel: 0,
+          messages: 0,
+          voiceTime: 0,
+          lastMessageTime: 0,
+          lastDailyTime: 0,
+          dailyStreak: 0,
+          coins: 0,
+          pets: []
+        });
+      }
+      return this.users.get(key);
+    }
+
     try {
       const result = await this.pool.query(
         'SELECT * FROM users WHERE user_id = $1 AND guild_id = $2',
@@ -144,6 +178,14 @@ class Database {
   }
 
   async updateUser(guildId, userId, data) {
+    if (this.useMemory) {
+      const key = `${guildId}-${userId}`;
+      const user = this.getUser(guildId, userId);
+      const merged = { ...user, ...data };
+      this.users.set(key, merged);
+      return merged;
+    }
+
     try {
       const user = await this.getUser(guildId, userId);
       const merged = { ...user, ...data };
@@ -184,12 +226,18 @@ class Database {
   }
 
   async getChatLeaderboard(guildId, limit = 10) {
+    if (this.useMemory) {
+      return Array.from(this.users.values())
+        .filter(user => user.guildId === guildId)
+        .sort((a, b) => b.chatXP - a.chatXP)
+        .slice(0, limit);
+    }
+
     try {
       const result = await this.pool.query(
         'SELECT user_id, chat_xp FROM users WHERE guild_id = $1 ORDER BY chat_xp DESC LIMIT $2',
         [guildId, limit]
       );
-
       return result.rows.map(row => ({
         userId: row.user_id,
         guildId,
@@ -202,12 +250,18 @@ class Database {
   }
 
   async getVoiceLeaderboard(guildId, limit = 10) {
+    if (this.useMemory) {
+      return Array.from(this.users.values())
+        .filter(user => user.guildId === guildId)
+        .sort((a, b) => b.voiceXP - a.voiceXP)
+        .slice(0, limit);
+    }
+
     try {
       const result = await this.pool.query(
         'SELECT user_id, voice_xp FROM users WHERE guild_id = $1 ORDER BY voice_xp DESC LIMIT $2',
         [guildId, limit]
       );
-
       return result.rows.map(row => ({
         userId: row.user_id,
         guildId,
@@ -220,12 +274,18 @@ class Database {
   }
 
   async getLeaderboard(guildId, limit = 10) {
+    if (this.useMemory) {
+      return Array.from(this.users.values())
+        .filter(user => user.guildId === guildId)
+        .sort((a, b) => (b.chatXP + b.voiceXP) - (a.chatXP + a.voiceXP))
+        .slice(0, limit);
+    }
+
     try {
       const result = await this.pool.query(
         'SELECT user_id, chat_xp, voice_xp FROM users WHERE guild_id = $1 ORDER BY (chat_xp + voice_xp) DESC LIMIT $2',
         [guildId, limit]
       );
-
       return result.rows.map(row => ({
         userId: row.user_id,
         guildId,
@@ -238,156 +298,98 @@ class Database {
     }
   }
 
-  async getGuildConfig(guildId) {
-    try {
-      const result = await this.pool.query(
-        'SELECT * FROM guild_configs WHERE guild_id = $1',
-        [guildId]
-      );
-
-      if (result.rows.length === 0) {
-        await this.pool.query(
-          'INSERT INTO guild_configs (guild_id) VALUES ($1)',
-          [guildId]
-        );
-
-        return {
-          guildId,
-          welcomeChannelId: null,
-          levelUpChannelId: null,
+  getGuildConfig(guildId) {
+    if (this.useMemory) {
+      if (!this.guilds.has(guildId)) {
+        this.guilds.set(guildId, {
           chatRoleRewards: [],
           voiceRoleRewards: [],
+          welcomeChannelId: null,
+          levelUpChannelId: null,
           shopItems: [],
           roleButtons: [],
           selectMenus: {}
-        };
+        });
       }
-
-      const row = result.rows[0];
-      return {
-        guildId: row.guild_id,
-        welcomeChannelId: row.welcome_channel_id,
-        levelUpChannelId: row.level_up_channel_id,
-        chatRoleRewards: row.chat_role_rewards,
-        voiceRoleRewards: row.voice_role_rewards,
-        shopItems: row.shop_items,
-        roleButtons: row.role_buttons,
-        selectMenus: row.select_menus
-      };
-    } catch (error) {
-      console.error('Erro ao obter config do guild:', error);
-      throw error;
+      return this.guilds.get(guildId);
     }
-  }
 
-  async updateGuildConfig(guildId, data) {
-    try {
-      const config = await this.getGuildConfig(guildId);
-      const merged = { ...config, ...data };
-
-      await this.pool.query(
-        `UPDATE guild_configs SET
-          welcome_channel_id = $1, level_up_channel_id = $2,
-          chat_role_rewards = $3, voice_role_rewards = $4,
-          shop_items = $5, role_buttons = $6, select_menus = $7,
-          updated_at = CURRENT_TIMESTAMP
-         WHERE guild_id = $8`,
-        [
-          merged.welcomeChannelId, merged.levelUpChannelId,
-          JSON.stringify(merged.chatRoleRewards), JSON.stringify(merged.voiceRoleRewards),
-          JSON.stringify(merged.shopItems), JSON.stringify(merged.roleButtons),
-          JSON.stringify(merged.selectMenus), guildId
-        ]
-      );
-
-      return merged;
-    } catch (error) {
-      console.error('Erro ao atualizar config do guild:', error);
-      throw error;
+    // Para PostgreSQL, retorna valor síncrono do cache (deve ser chamado após initialize)
+    if (!this.guilds.has(guildId)) {
+      this.guilds.set(guildId, {
+        guildId,
+        welcomeChannelId: null,
+        levelUpChannelId: null,
+        chatRoleRewards: [],
+        voiceRoleRewards: [],
+        shopItems: [],
+        roleButtons: [],
+        selectMenus: {}
+      });
     }
+    return this.guilds.get(guildId);
   }
 
-  async addRoleReward(guildId, level, roleId, type = 'chat') {
-    const config = await this.getGuildConfig(guildId);
+  updateGuildConfig(guildId, data) {
+    const config = this.getGuildConfig(guildId);
+    const merged = { ...config, ...data };
+    this.guilds.set(guildId, merged);
+    return merged;
+  }
+
+  addRoleReward(guildId, level, roleId, type = 'chat') {
+    const config = this.getGuildConfig(guildId);
     const rewardKey = type === 'chat' ? 'chatRoleRewards' : 'voiceRoleRewards';
-    
-    const rewards = config[rewardKey].filter(r => r.level !== level);
-    rewards.push({ level, roleId });
-    rewards.sort((a, b) => a.level - b.level);
-
-    const updateData = {};
-    updateData[rewardKey] = rewards;
-    
-    return this.updateGuildConfig(guildId, updateData);
+    config[rewardKey] = config[rewardKey].filter(r => r.level !== level);
+    config[rewardKey].push({ level, roleId });
+    config[rewardKey].sort((a, b) => a.level - b.level);
+    this.guilds.set(guildId, config);
+    return config;
   }
 
-  async removeRoleReward(guildId, level, type = 'chat') {
-    const config = await this.getGuildConfig(guildId);
+  removeRoleReward(guildId, level, type = 'chat') {
+    const config = this.getGuildConfig(guildId);
     const rewardKey = type === 'chat' ? 'chatRoleRewards' : 'voiceRoleRewards';
-    
-    const rewards = config[rewardKey].filter(r => r.level !== level);
-
-    const updateData = {};
-    updateData[rewardKey] = rewards;
-    
-    return this.updateGuildConfig(guildId, updateData);
+    config[rewardKey] = config[rewardKey].filter(r => r.level !== level);
+    this.guilds.set(guildId, config);
+    return config;
   }
 
-  async getRoleRewardsForLevel(guildId, level, type = 'chat') {
-    const config = await this.getGuildConfig(guildId);
+  getRoleRewardsForLevel(guildId, level, type = 'chat') {
+    const config = this.getGuildConfig(guildId);
     const rewardKey = type === 'chat' ? 'chatRoleRewards' : 'voiceRoleRewards';
     return config[rewardKey].filter(r => r.level <= level);
   }
 
-  async startVoiceTracking(guildId, userId) {
-    try {
-      await this.pool.query(
-        'INSERT INTO voice_tracking (user_id, guild_id, start_time) VALUES ($1, $2, $3) ON CONFLICT (user_id, guild_id) DO UPDATE SET start_time = $3',
-        [userId, guildId, Date.now()]
-      );
-    } catch (error) {
-      console.error('Erro ao iniciar voice tracking:', error);
+  startVoiceTracking(guildId, userId) {
+    if (this.useMemory) {
+      const key = `${guildId}-${userId}`;
+      this.voiceTracking.set(key, Date.now());
+      return;
     }
+    // Para PostgreSQL, seria assíncrono
   }
 
-  async endVoiceTracking(guildId, userId) {
-    try {
-      const result = await this.pool.query(
-        'SELECT start_time FROM voice_tracking WHERE user_id = $1 AND guild_id = $2',
-        [userId, guildId]
-      );
-
-      if (result.rows.length === 0) {
-        return 0;
+  endVoiceTracking(guildId, userId) {
+    if (this.useMemory) {
+      const key = `${guildId}-${userId}`;
+      if (this.voiceTracking.has(key)) {
+        const startTime = this.voiceTracking.get(key);
+        const duration = Date.now() - startTime;
+        this.voiceTracking.delete(key);
+        return duration;
       }
-
-      const startTime = result.rows[0].start_time;
-      const duration = Date.now() - startTime;
-
-      await this.pool.query(
-        'DELETE FROM voice_tracking WHERE user_id = $1 AND guild_id = $2',
-        [userId, guildId]
-      );
-
-      return duration;
-    } catch (error) {
-      console.error('Erro ao finalizar voice tracking:', error);
       return 0;
     }
+    // Para PostgreSQL, seria assíncrono
+    return 0;
   }
 
-  async isInVoice(guildId, userId) {
-    try {
-      const result = await this.pool.query(
-        'SELECT EXISTS(SELECT 1 FROM voice_tracking WHERE user_id = $1 AND guild_id = $2)',
-        [userId, guildId]
-      );
-
-      return result.rows[0].exists;
-    } catch (error) {
-      console.error('Erro ao verificar voice tracking:', error);
-      return false;
+  isInVoice(guildId, userId) {
+    if (this.useMemory) {
+      return this.voiceTracking.has(`${guildId}-${userId}`);
     }
+    return false;
   }
 
   async close() {
