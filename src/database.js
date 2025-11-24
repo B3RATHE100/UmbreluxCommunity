@@ -19,7 +19,9 @@ class Database {
         voiceTime: 0,
         lastMessageTime: 0,
         lastDailyTime: 0,
-        dailyStreak: 0
+        dailyStreak: 0,
+        coins: 0,
+        pets: []
       });
     }
     return this.users.get(key);
@@ -81,7 +83,9 @@ class Database {
         chatRoleRewards: [],
         voiceRoleRewards: [],
         welcomeChannelId: null,
-        levelUpChannelId: null
+        levelUpChannelId: null,
+        shopItems: [],
+        petRoleButtons: []
       });
     }
     return this.guilds.get(guildId);
