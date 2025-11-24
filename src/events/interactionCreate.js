@@ -158,6 +158,41 @@ async function handleButtonInteraction(interaction) {
 async function handleSelectMenuInteraction(interaction) {
   const { customId, values } = interaction;
   
+  if (customId === 'shop_select') {
+    const selected = values[0];
+    const userData = db.getUser(interaction.guild.id, interaction.user.id);
+    const guildConfig = db.getGuildConfig(interaction.guild.id);
+    
+    if (!guildConfig.shopItems || !guildConfig.shopItems[parseInt(selected)]) {
+      return await interaction.reply({
+        content: '❌ Item não encontrado!',
+        ephemeral: true
+      });
+    }
+    
+    const item = guildConfig.shopItems[parseInt(selected)];
+    
+    if (userData.coins < item.price) {
+      const embed = new EmbedBuilder()
+        .setColor(config.colors.error)
+        .setTitle('❌ Moedas Insuficientes')
+        .setDescription(`Você precisa de **${item.price}** moedas, mas tem apenas **${userData.coins}**`);
+      
+      return await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+    
+    userData.coins -= item.price;
+    db.updateUser(interaction.guild.id, interaction.user.id, userData);
+    
+    const confirmEmbed = new EmbedBuilder()
+      .setColor(config.colors.success)
+      .setTitle('✅ Compra Realizada!')
+      .setDescription(`Você comprou **${item.name}** por **${item.price}** moedas!\n\nSaldo atual: **${userData.coins}** moedas`);
+    
+    await interaction.reply({ embeds: [confirmEmbed], ephemeral: true });
+    return;
+  }
+  
   if (customId === 'welcome_actions') {
     const selected = values[0];
     

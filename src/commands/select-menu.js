@@ -1,40 +1,39 @@
-import { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ChannelSelectMenuBuilder, PermissionFlagsBits } from 'discord.js';
-import { db } from '../database.js';
+import { SlashCommandBuilder, EmbedBuilder, StringSelectMenuBuilder, ActionRowBuilder, PermissionFlagsBits } from 'discord.js';
 import { config } from '../config.js';
 
 export default {
   data: new SlashCommandBuilder()
-    .setName('role-button')
-    .setDescription('🎯 Configure um botão para dar/remover cargo (Admin)')
+    .setName('select-menu')
+    .setDescription('📋 Configure um selecionador personalizado em uma mensagem (Admin)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption(option =>
       option
-        .setName('etiqueta')
-        .setDescription('Texto do botão')
+        .setName('id-menu')
+        .setDescription('ID único do menu (ex: roles_select)')
         .setRequired(true)
     )
-    .addRoleOption(option =>
+    .addStringOption(option =>
       option
-        .setName('cargo')
-        .setDescription('Cargo a dar/remover')
+        .setName('titulo')
+        .setDescription('Título do selecionador')
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName('opcoes')
+        .setDescription('Opções separadas por | (ex: Opção1|Opção2|Opção3)')
         .setRequired(true)
     )
     .addChannelOption(option =>
       option
         .setName('canal')
-        .setDescription('Canal para enviar o botão')
+        .setDescription('Canal para enviar o selecionador')
         .setRequired(true)
     )
     .addStringOption(option =>
       option
-        .setName('emoji')
-        .setDescription('Emoji do botão')
-        .setRequired(false)
-    )
-    .addStringOption(option =>
-      option
         .setName('link-mensagem')
-        .setDescription('Link da mensagem para adicionar botão')
+        .setDescription('Link da mensagem para adicionar selecionador')
         .setRequired(false)
     ),
   
@@ -46,32 +45,35 @@ export default {
       });
     }
 
-    const etiqueta = interaction.options.getString('etiqueta');
-    const cargo = interaction.options.getRole('cargo');
-    const emoji = interaction.options.getString('emoji') || '✨';
+    const idMenu = interaction.options.getString('id-menu');
+    const titulo = interaction.options.getString('titulo');
+    const opcoesStr = interaction.options.getString('opcoes');
     const canal = interaction.options.getChannel('canal');
     const linkMensagem = interaction.options.getString('link-mensagem');
 
-    const buttonId = `role_toggle_${cargo.id}`;
-    
-    const button = new ButtonBuilder()
-      .setCustomId(buttonId)
-      .setLabel(etiqueta)
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji(emoji);
+    const opcoes = opcoesStr.split('|').map((opt, idx) => ({
+      label: opt.trim(),
+      value: `${idMenu}_${idx}`
+    }));
 
-    const row = new ActionRowBuilder().addComponents(button);
+    if (opcoes.length < 1 || opcoes.length > 25) {
+      return interaction.reply({
+        content: '❌ Você precisa de 1 a 25 opções!',
+        ephemeral: true
+      });
+    }
 
-    const embed = new EmbedBuilder()
-      .setColor(config.colors.veil)
-      .setTitle(`🎯 ${etiqueta}`)
-      .setDescription(`Clique no botão para ganhar/perder o cargo ${cargo.toString()}`);
+    const selectMenu = new StringSelectMenuBuilder()
+      .setCustomId(idMenu)
+      .setPlaceholder(titulo)
+      .addOptions(opcoes);
+
+    const row = new ActionRowBuilder().addComponents(selectMenu);
 
     try {
       let msg;
-      
+
       if (linkMensagem) {
-        // Extrair IDs do link
         const match = linkMensagem.match(/discord\.com\/channels\/\d+\/(\d+)\/(\d+)/);
         
         if (!match) {
@@ -103,32 +105,28 @@ export default {
           });
         }
       } else {
+        const embed = new EmbedBuilder()
+          .setColor(config.colors.veil)
+          .setTitle(`📋 ${titulo}`)
+          .setDescription('Selecione uma opção abaixo');
+
         msg = await canal.send({ embeds: [embed], components: [row] });
       }
-      
-      const guildConfig = db.getGuildConfig(interaction.guild.id);
-      if (!guildConfig.roleButtons) {
-        guildConfig.roleButtons = [];
-      }
-      
-      guildConfig.roleButtons.push({
-        messageId: msg.id,
-        channelId: msg.channelId,
-        roleId: cargo.id,
-        buttonId: buttonId
-      });
-      
-      db.updateGuildConfig(interaction.guild.id, guildConfig);
-      
+
       const confirmEmbed = new EmbedBuilder()
         .setColor(config.colors.success)
-        .setTitle('✅ Botão de Cargo Criado!')
-        .setDescription(`Botão **${etiqueta}** ${linkMensagem ? 'adicionado à mensagem' : 'criado em ' + canal.toString()}\nCargo: ${cargo.toString()}`);
+        .setTitle('✅ Menu Selecionador Criado!')
+        .setDescription(`Menu **${titulo}** adicionado${linkMensagem ? ' à mensagem' : ' em ' + canal.toString()}\n\n**Opções:** ${opcoes.length}`)
+        .addFields({
+          name: 'Opções:',
+          value: opcoes.map(o => `• ${o.label}`).join('\n')
+        });
       
       await interaction.reply({ embeds: [confirmEmbed], ephemeral: true });
     } catch (error) {
+      console.error('Erro ao criar menu:', error);
       await interaction.reply({
-        content: `❌ Erro ao criar botão: ${error.message}`,
+        content: `❌ Erro ao criar menu: ${error.message}`,
         ephemeral: true
       });
     }
