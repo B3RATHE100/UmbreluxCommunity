@@ -56,6 +56,47 @@ export default {
 async function handleButtonInteraction(interaction) {
   const { customId } = interaction;
   
+  if (customId.startsWith('role_toggle_')) {
+    const roleId = customId.replace('role_toggle_', '');
+    const role = interaction.guild.roles.cache.get(roleId);
+    
+    if (!role) {
+      return await interaction.reply({
+        content: '❌ Este cargo não existe mais!',
+        ephemeral: true
+      });
+    }
+    
+    const hasRole = interaction.member.roles.cache.has(roleId);
+    
+    try {
+      if (hasRole) {
+        await interaction.member.roles.remove(roleId);
+        const embed = new EmbedBuilder()
+          .setColor(config.colors.warning)
+          .setTitle('🔓 Cargo Removido')
+          .setDescription(`Você perdeu o cargo ${role.toString()}`);
+        
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+      } else {
+        await interaction.member.roles.add(roleId);
+        const embed = new EmbedBuilder()
+          .setColor(config.colors.success)
+          .setTitle('🎯 Cargo Adicionado')
+          .setDescription(`Você ganhou o cargo ${role.toString()}`);
+        
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+    } catch (error) {
+      console.error('Erro ao gerenciar cargo:', error);
+      await interaction.reply({
+        content: '❌ Erro ao adicionar/remover cargo!',
+        ephemeral: true
+      });
+    }
+    return;
+  }
+  
   if (customId === 'view_rules') {
     const embed = new EmbedBuilder()
       .setColor(config.colors.primary)
