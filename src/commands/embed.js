@@ -10,13 +10,13 @@ export default {
       option
         .setName('titulo')
         .setDescription('Título da embed')
-        .setRequired(true)
+        .setRequired(false)
     )
     .addStringOption(option =>
       option
         .setName('descricao')
         .setDescription('Descrição da embed')
-        .setRequired(true)
+        .setRequired(false)
     )
     .addChannelOption(option =>
       option
@@ -82,9 +82,15 @@ export default {
     }
 
     const embed = new EmbedBuilder()
-      .setColor(cor)
-      .setTitle(titulo)
-      .setDescription(descricao);
+      .setColor(cor);
+
+    if (titulo) {
+      embed.setTitle(titulo);
+    }
+
+    if (descricao) {
+      embed.setDescription(descricao);
+    }
 
     if (autor) {
       embed.setAuthor({ name: autor });
@@ -108,11 +114,7 @@ export default {
 
     if (rodape) {
       embed.setFooter({ text: rodape });
-    } else {
-      embed.setFooter({ text: `Enviado por ${interaction.user.username}` });
     }
-
-    embed.setTimestamp();
 
     try {
       await canal.send({ embeds: [embed] });
