@@ -6,6 +6,12 @@ export default {
     .setName('embed')
     .setDescription('🎨 Crie uma embed personalizada (Admin)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addChannelOption(option =>
+      option
+        .setName('canal')
+        .setDescription('Canal para enviar a embed')
+        .setRequired(true)
+    )
     .addStringOption(option =>
       option
         .setName('titulo')
@@ -17,12 +23,6 @@ export default {
         .setName('descricao')
         .setDescription('Descrição da embed')
         .setRequired(false)
-    )
-    .addChannelOption(option =>
-      option
-        .setName('canal')
-        .setDescription('Canal para enviar a embed')
-        .setRequired(true)
     )
     .addStringOption(option =>
       option
