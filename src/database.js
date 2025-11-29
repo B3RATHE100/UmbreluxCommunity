@@ -304,7 +304,7 @@ class Database {
         this.guilds.set(guildId, {
           chatRoleRewards: [],
           voiceRoleRewards: [],
-          welcomeChannelId: null,
+          welcomeChannelId: '1400592838323998860',
           levelUpChannelId: null,
           shopItems: [],
           roleButtons: [],
@@ -318,7 +318,7 @@ class Database {
     if (!this.guilds.has(guildId)) {
       this.guilds.set(guildId, {
         guildId,
-        welcomeChannelId: null,
+        welcomeChannelId: '1400592838323998860',
         levelUpChannelId: null,
         chatRoleRewards: [],
         voiceRoleRewards: [],
